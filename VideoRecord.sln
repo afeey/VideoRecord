@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RstpToMp4", "RstpToMp4\RstpToMp4.vcxproj", "{1502885B-FC5F-4205-9780-FDD5F0113E0E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VedioPlayer", "VedioPlayer\VedioPlayer.vcxproj", "{D65B63C2-7129-4325-AF5C-1B7B3CAC10DA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VideoRecord", "VideoRecord\VideoRecord.vcxproj", "{07B908F7-FD20-4216-8470-947D2ECB155C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1502885B-FC5F-4205-9780-FDD5F0113E0E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1502885B-FC5F-4205-9780-FDD5F0113E0E}.Debug|Win32.Build.0 = Debug|Win32
+		{1502885B-FC5F-4205-9780-FDD5F0113E0E}.Release|Win32.ActiveCfg = Release|Win32
+		{1502885B-FC5F-4205-9780-FDD5F0113E0E}.Release|Win32.Build.0 = Release|Win32
+		{D65B63C2-7129-4325-AF5C-1B7B3CAC10DA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D65B63C2-7129-4325-AF5C-1B7B3CAC10DA}.Debug|Win32.Build.0 = Debug|Win32
+		{D65B63C2-7129-4325-AF5C-1B7B3CAC10DA}.Release|Win32.ActiveCfg = Release|Win32
+		{D65B63C2-7129-4325-AF5C-1B7B3CAC10DA}.Release|Win32.Build.0 = Release|Win32
+		{07B908F7-FD20-4216-8470-947D2ECB155C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{07B908F7-FD20-4216-8470-947D2ECB155C}.Debug|Win32.Build.0 = Debug|Win32
+		{07B908F7-FD20-4216-8470-947D2ECB155C}.Release|Win32.ActiveCfg = Release|Win32
+		{07B908F7-FD20-4216-8470-947D2ECB155C}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
