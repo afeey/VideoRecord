@@ -23,8 +23,6 @@ extern "C" {
 
 #define REFRESH_EVENT  (SDL_USEREVENT + 1)	//刷新事件
 
-
-
 AVFormatContext	*pInFormatCtx;	//输入格式上下文
 AVStream		*pInStream;		//输入流
 
@@ -64,21 +62,39 @@ char *filename = "";
 
 bool stop = false;
 
+
+// 退出
+void Quit();
+
+//打开
+int Open();
+//播放
+int Play();
+//关闭
+void Close();
+
+
 // 读取音视频包
 int receive_thread(void *opaque){
 	while (!stop) {
 		while(true){
 			// 读取数据包
-			if(av_read_frame(pInFormatCtx, pInPacket)<0){
-				stop = true;
+			try{
+				if(av_read_frame(pInFormatCtx, pInPacket)<0){
+					printf("读取不到数据帧，程序退出\n");
+					Quit();
+				}
+			}catch(exception e){
+				printf("读取数据帧异常，程序退出\n");
+				Quit();
 			}
 
 			if(pInPacket->stream_index == videoIndex){
 				printf("解码数据包\n");
 				ret = avcodec_decode_video2(pInCodecCtx, pFrame, &got_picture, pInPacket);
 				if(ret < 0){
-					printf("解码错误\n");
-					stop = true;
+					printf("解码错误，程序退出\n");
+					Quit();
 					break;
 				}
 				if(got_picture){
@@ -87,7 +103,7 @@ int receive_thread(void *opaque){
 					frameQueue.push(pFrameYUV);
 				}
 
-				printf("写数据包\n");
+				printf("写数据包...\n");
 				// 写文件
 				pInPacket->flags |= AV_PKT_FLAG_KEY;
 				pInPacket->stream_index = 0;
@@ -113,13 +129,6 @@ int refresh_thread(void *opaque){
 	printf("更新线程退出\n");
 	return 0;
 }
-
-//打开
-int Open();
-//播放
-int Play();
-//关闭
-void Close();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -158,7 +167,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 	Close();
 
-	printf("按任意键退出\n");
+	printf("\n--------------按任意键退出------------------\n");
 	getchar();
 
 	return 0;
@@ -336,4 +345,11 @@ void Close(){
 	avcodec_close(pInCodecCtx);
 	avformat_close_input(&pInFormatCtx);
 	avformat_close_input(&pOutFormatCtx);
+}
+
+//退出
+void Quit(){
+	SDL_Event event;
+	event.type = SDL_QUIT;
+	SDL_PushEvent(&event);
 }
