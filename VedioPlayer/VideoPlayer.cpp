@@ -21,8 +21,6 @@ extern "C" {
 }
 #endif
 
-#define REFRESH_EVENT  (SDL_USEREVENT + 1)	//刷新事件
-
 AVFormatContext	*pInFormatCtx;	//输入格式上下文
 AVStream		*pInStream;		//输入流
 
@@ -52,6 +50,7 @@ SDL_Texture* sdlTexture;
 SDL_Rect	sdlRect;
 SDL_Thread *receive_tid;	//接收线程ID
 SDL_Thread *refresh_tid;	//更新线程ID
+SDL_mutex *pLock;			//互斥
 SDL_Event event;
 
 struct SwsContext *img_convert_ctx;
@@ -99,8 +98,13 @@ int receive_thread(void *opaque){
 				}
 				if(got_picture){
 					printf("转换图片帧\n");
+					pFrameYUV = av_frame_alloc();
+					avpicture_fill((AVPicture *)pFrameYUV, out_buffer, AV_PIX_FMT_YUV420P, pInCodecCtx->width, pInCodecCtx->height);
 					sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pInCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
+					
+					SDL_mutexP(pLock);
 					frameQueue.push(pFrameYUV);
+					SDL_mutexV(pLock);
 				}
 
 				printf("写数据包...\n");
@@ -121,10 +125,22 @@ int receive_thread(void *opaque){
 // 视频显示刷新
 int refresh_thread(void *opaque){
 	while (!stop) {
-		SDL_Event event;
-		event.type = REFRESH_EVENT;
-		SDL_PushEvent(&event);
-		SDL_Delay(10);
+		if(!frameQueue.empty()){
+
+			SDL_mutexP(pLock);
+			AVFrame *outFrame = frameQueue.front();
+			frameQueue.pop();
+			SDL_mutexV(pLock);
+
+			printf("刷新视频,帧地址：%p,frame size %d\n",outFrame,frameQueue.size());
+			SDL_UpdateTexture( sdlTexture, NULL, outFrame->data[0], outFrame->linesize[0] );  
+			SDL_RenderClear( sdlRenderer );  
+			SDL_RenderCopy( sdlRenderer, sdlTexture, NULL, NULL);  
+			SDL_RenderPresent( sdlRenderer );
+
+			av_frame_free(&outFrame);
+		}
+		SDL_Delay(20);
 	}
 	printf("更新线程退出\n");
 	return 0;
@@ -147,18 +163,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	while(true){
 		SDL_WaitEvent(&event);
-		if(event.type==REFRESH_EVENT){
-			if(!frameQueue.empty()){
-				AVFrame *outFrame = frameQueue.front();
-				frameQueue.pop();
-
-				printf("刷新视频,frame size %d\n",frameQueue.size());
-				SDL_UpdateTexture( sdlTexture, NULL, outFrame->data[0], outFrame->linesize[0] );  
-				SDL_RenderClear( sdlRenderer );  
-				SDL_RenderCopy( sdlRenderer, sdlTexture, NULL, NULL);  
-				SDL_RenderPresent( sdlRenderer );
-			}
-		}else if(event.type==SDL_QUIT){
+		if(event.type==SDL_QUIT){
 			printf("退出SDL窗口\n");
 			stop = true;
 			break;
@@ -315,15 +320,15 @@ int Play(){
 	sdlRect.w=screen_w;
 	sdlRect.h=screen_h;
 
+	pLock = SDL_CreateMutex();
+
 	// 接收线程
 	pInPacket=(AVPacket *)av_malloc(sizeof(AVPacket));
 	receive_tid = SDL_CreateThread(receive_thread,NULL,NULL);
 
 	pFrame = av_frame_alloc();
-	pFrameYUV = av_frame_alloc();
 	out_buffer=(uint8_t *)av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, pInCodecCtx->width, pInCodecCtx->height));
-	avpicture_fill((AVPicture *)pFrameYUV, out_buffer, AV_PIX_FMT_YUV420P, pInCodecCtx->width, pInCodecCtx->height);
-
+	
 	img_convert_ctx = sws_getContext(pInCodecCtx->width, pInCodecCtx->height, pInCodecCtx->pix_fmt, 
 		pInCodecCtx->width, pInCodecCtx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
@@ -335,6 +340,7 @@ void Close(){
 	//延时1秒释放资源
 	SDL_Delay(1000);
 	SDL_Quit();
+	SDL_DestroyMutex(pLock);
 
 	av_write_trailer(pOutFormatCtx);
 	printf("保存文件\n");
@@ -352,4 +358,5 @@ void Quit(){
 	SDL_Event event;
 	event.type = SDL_QUIT;
 	SDL_PushEvent(&event);
+	stop = true;
 }
