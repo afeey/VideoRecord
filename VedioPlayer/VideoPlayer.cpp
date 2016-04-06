@@ -34,13 +34,13 @@ int				videoIndex = -1;//视频流索引
 
 int				i;
 queue<AVFrame*> frameQueue;		//视频帧队列
-AVFrame			*pFrame;
-AVFrame			*pFrameYUV;
+AVFrame			*pFrame = NULL;
+AVFrame			*pFrameYUV = NULL;
 uint8_t			*out_buffer;
 AVPacket		*pInPacket;
 int				ret;
 int				got_picture;
-
+int				frameNumber = 0;
 
 int screen_w;
 int	screen_h;
@@ -72,6 +72,21 @@ int Play();
 //关闭
 void Close();
 
+// 读取音视频包
+int receive_thread1(void *opaque){
+	while (!stop) {
+		if(av_read_frame(pInFormatCtx, pInPacket)<0){
+			printf("读取不到数据帧，程序退出\n");
+			Quit();
+		}else{
+			printf("读取到帧...\n");
+		}
+		SDL_Delay(5);
+		printf("循环读取...\n");
+	}
+	printf("接收线程退出\n");
+	return 0;
+}
 
 // 读取音视频包
 int receive_thread(void *opaque){
@@ -79,17 +94,20 @@ int receive_thread(void *opaque){
 		while(true){
 			// 读取数据包
 			try{
+				printf("读取帧...\n");
 				if(av_read_frame(pInFormatCtx, pInPacket)<0){
 					printf("读取不到数据帧，程序退出\n");
 					Quit();
+				}else{
+					printf("读取到帧...\n");
 				}
 			}catch(exception e){
 				printf("读取数据帧异常，程序退出\n");
 				Quit();
 			}
-
+			//printf("读取到帧...\n");
 			if(pInPacket->stream_index == videoIndex){
-				printf("解码数据包\n");
+				printf("解码帧...\n");
 				ret = avcodec_decode_video2(pInCodecCtx, pFrame, &got_picture, pInPacket);
 				if(ret < 0){
 					printf("解码错误，程序退出\n");
@@ -102,9 +120,9 @@ int receive_thread(void *opaque){
 					avpicture_fill((AVPicture *)pFrameYUV, out_buffer, AV_PIX_FMT_YUV420P, pInCodecCtx->width, pInCodecCtx->height);
 					sws_scale(img_convert_ctx, (const uint8_t* const*)pFrame->data, pFrame->linesize, 0, pInCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 					
-					SDL_mutexP(pLock);
+					//SDL_mutexP(pLock);
 					frameQueue.push(pFrameYUV);
-					SDL_mutexV(pLock);
+					//SDL_mutexV(pLock);
 				}
 
 				printf("写数据包...\n");
@@ -116,7 +134,8 @@ int receive_thread(void *opaque){
 				break;
 			}
 		}
-		SDL_Delay(1);
+		SDL_Delay(30);
+		printf("循环读取...\n");
 	}
 	printf("接收线程退出\n");
 	return 0;
@@ -127,10 +146,10 @@ int refresh_thread(void *opaque){
 	while (!stop) {
 		if(!frameQueue.empty()){
 
-			SDL_mutexP(pLock);
+			//SDL_mutexP(pLock);
 			AVFrame *outFrame = frameQueue.front();
 			frameQueue.pop();
-			SDL_mutexV(pLock);
+			//SDL_mutexV(pLock);
 
 			printf("刷新视频,帧地址：%p,frame size %d\n",outFrame,frameQueue.size());
 			SDL_UpdateTexture( sdlTexture, NULL, outFrame->data[0], outFrame->linesize[0] );  
@@ -141,6 +160,7 @@ int refresh_thread(void *opaque){
 			av_frame_free(&outFrame);
 		}
 		SDL_Delay(20);
+		//printf("循环刷新...\n");
 	}
 	printf("更新线程退出\n");
 	return 0;
